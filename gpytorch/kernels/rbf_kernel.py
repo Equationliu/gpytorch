@@ -99,6 +99,7 @@ class RBFKernel(Kernel):
             x1.requires_grad
             or x2.requires_grad
             or (self.ard_num_dims is not None and self.ard_num_dims > 1)
+            or diag
         ):
             x1_ = x1.div(self.lengthscale)
             x2_ = x2.div(self.lengthscale)
@@ -107,5 +108,5 @@ class RBFKernel(Kernel):
         return RBFCovariance().apply(x1, x2, self.lengthscale,
                                      lambda x1, x2: self._covar_dist(x1, x2,
                                                                      square_dist=True,
-                                                                     diag=diag,
+                                                                     diag=False,
                                                                      **params))
