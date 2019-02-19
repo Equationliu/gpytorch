@@ -160,14 +160,14 @@ class CatLazyTensor(LazyTensor):
 
         # Process the list
         if len(res_list) == 1:
-            return res_list[0]
+            return res_list[0].to(self.output_device)
         else:
             # Figure out the new concat dimension
             shape_diff = [res_size - target_size for res_size, target_size in zip(res_list[0].shape, target_shape)]
             new_cat_dim = next((i for i, x in enumerate(shape_diff) if x), None)  # First nonzero element
 
             if row_col_are_absorbed:
-                return torch.cat(res_list, dim=new_cat_dim)
+                return torch.cat([res.to(self.output_device) for res in res_list], dim=new_cat_dim)
             else:
                 res = self.__class__(*res_list, dim=new_cat_dim, output_device=self.output_device)
                 return res
