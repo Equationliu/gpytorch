@@ -300,6 +300,11 @@ class cg_tolerance(_value_context):
 
     _global_value = 0.05
 
+class cg_initial_solution(_value_context):
+    """
+    Context manager for initializing CG.
+    """
+    _global_value = None
 
 class max_cholesky_numel(_value_context):
     """

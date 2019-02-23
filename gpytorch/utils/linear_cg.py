@@ -88,6 +88,9 @@ def linear_cg(
     if is_vector:
         rhs = rhs.unsqueeze(-1)
 
+    if initial_guess is None:
+        initial_guess = settings.cg_initial_solution.value()
+
     # Some default arguments
     if max_iter is None:
         max_iter = settings.max_cg_iterations.value()
