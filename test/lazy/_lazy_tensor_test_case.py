@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
-import gpytorch
-import torch
-import os
 import math
+import os
 import random
 from abc import ABC, abstractmethod
 from itertools import product, combinations
 from test._utils import approx_equal
+
+import gpytorch
+import torch
 
 
 class RectangularLazyTensorTestCase(ABC):
@@ -540,18 +541,18 @@ class LazyTensorTestCase(RectangularLazyTensorTestCase):
             vecs = torch.randn(*lazy_tensor.batch_shape, lazy_tensor.size(-1), 3, requires_grad=True)
             vecs_copy = vecs.clone().detach_().requires_grad_(True)
 
-            with gpytorch.settings.num_trace_samples(128):
-                res_inv_quad, res_logdet = lazy_tensor.inv_quad_logdet(inv_quad_rhs=vecs, logdet=True)
-            res = res_inv_quad + res_logdet
+        with gpytorch.settings.num_trace_samples(1024):
+            res_inv_quad, res_logdet = lazy_tensor.inv_quad_logdet(inv_quad_rhs=vecs, logdet=True)
 
-            actual_inv_quad = evaluated.inverse().matmul(vecs_copy).mul(vecs_copy).sum(-2).sum(-1)
-            actual_logdet = torch.cat(
-                [torch.logdet(flattened_evaluated[i]).unsqueeze(0) for i in range(lazy_tensor.batch_shape.numel())]
-            ).view(lazy_tensor.batch_shape)
-            actual = actual_inv_quad + actual_logdet
+        actual_inv_quad = evaluated.inverse().matmul(vecs_copy).mul(vecs_copy).sum(-2).sum(-1)
+        actual_logdet = torch.cat(
+            [torch.logdet(flattened_evaluated[i]).unsqueeze(0) for i in range(lazy_tensor.batch_shape.numel())]
+        ).view(lazy_tensor.batch_shape)
 
-            diff = (res - actual).abs() / actual.abs().clamp(1, math.inf)
-            self.assertLess(diff.max().item(), 15e-2)
+        diff_invq = (res_inv_quad - actual_inv_quad).abs() / actual_inv_quad.abs().clamp(1, math.inf)
+        diff_logdet = (res_logdet - actual_logdet).abs() / actual_logdet.abs().clamp(1, math.inf)
+        self.assertLess(diff_invq.max().item(), 0.01)
+        self.assertLess(diff_logdet.max().item(), 0.3)
 
     def test_inv_quad_logdet_no_reduce(self):
         if not self.__class__.skip_slq_tests:
@@ -596,15 +597,20 @@ class LazyTensorTestCase(RectangularLazyTensorTestCase):
             actual = lazy_tensor.matmul(test_mat)
             self.assertLess(torch.norm(res - actual) / actual.norm(), 0.1)
 
-    def test_root_inv_decomposition(self):
-        lazy_tensor = self.create_lazy_tensor()
-        root_approx = lazy_tensor.root_inv_decomposition()
+        with gpytorch.settings.num_trace_samples(128):
+            res_inv_quad, res_logdet = lazy_tensor.inv_quad_logdet(
+                inv_quad_rhs=vecs, logdet=True, reduce_inv_quad=False
+            )
 
-        test_mat = torch.randn(*lazy_tensor.batch_shape, lazy_tensor.size(-1), 5)
+        actual_inv_quad = evaluated.inverse().matmul(vecs_copy).mul(vecs_copy).sum(-2).sum(-1)
+        actual_logdet = torch.cat(
+            [torch.logdet(flattened_evaluated[i]).unsqueeze(0) for i in range(lazy_tensor.batch_shape.numel())]
+        ).view(lazy_tensor.batch_shape)
 
-        res = root_approx.matmul(test_mat)
-        actual = lazy_tensor.inv_matmul(test_mat)
-        self.assertLess(torch.norm(res - actual) / actual.norm(), 0.1)
+        diff_invq = (res_inv_quad.sum(-1) - actual_inv_quad).abs() / actual_inv_quad.abs().clamp(1, math.inf)
+        diff_logdet = (res_logdet - actual_logdet).abs() / res_logdet.abs().clamp(1, math.inf)
+        self.assertLess(diff_invq.max().item(), 0.01)
+        self.assertLess(diff_logdet.max().item(), 0.3)
 
     def test_sample(self):
         if self.__class__.should_test_sample:
