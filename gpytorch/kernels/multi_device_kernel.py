@@ -60,7 +60,10 @@ class MultiDeviceKernel(DataParallel, Kernel):
             return self.module.forward(*inputs[0], **self._kwargs[0])
 
         # Can't cache the replication because the base kernel module can change every time (e.g. param updates)
-        self.module.distance_module = None
+        def set_distance_module_to_none(module):
+            if hasattr(module, 'distance_module'):
+                module.distance_module = None
+        self.module.apply(set_distance_module_to_none)
         replicas = self.replicate(self.module, self.device_ids[:len(inputs)])
 
         # TODO: parallel_apply might be too heavyweight in some cases?
