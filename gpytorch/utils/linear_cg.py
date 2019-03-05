@@ -189,6 +189,7 @@ def linear_cg(
 
     update_tridiag = True
     last_tridiag_iter = 0
+    breaking = False
     # Start the iteration
     for k in range(n_iter):
         # Get next alpha
@@ -248,6 +249,8 @@ def linear_cg(
         torch.lt(residual_norm, stop_updating_after, out=has_converged)
 
         if k >= 10 and bool(residual_norm.mean() < tolerance) and not (n_tridiag and k < n_tridiag_iter):
+            breaking = True
+            print("CG broke after {}".format(k))
             break
 
         # Update tridiagonal matrices, if applicable
@@ -276,6 +279,8 @@ def linear_cg(
 
     # Un-normalize
     result.mul_(rhs_norm)
+    if not breaking:
+        print("CG hit max iter")
 
     if is_vector:
         result = result.squeeze(-1)

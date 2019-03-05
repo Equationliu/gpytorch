@@ -79,4 +79,5 @@ def pivoted_cholesky(matrix, max_iter, error_tol=None):
             errors = torch.norm(matrix_diag.gather(-1, pi_i), 1, dim=-1) / orig_error
         m = m + 1
 
+    print("Pivoted cholesky rank of {}".format(m))
     return L[..., :m, :].transpose(-1, -2).contiguous()
