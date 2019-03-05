@@ -250,7 +250,7 @@ def linear_cg(
 
         if k >= 10 and bool(residual_norm.mean() < tolerance) and not (n_tridiag and k < n_tridiag_iter):
             breaking = True
-            print("CG broke after {}".format(k))
+            print(f"CG broke after {k} iterations with residual {residual_norm.mean()}")
             break
 
         # Update tridiagonal matrices, if applicable
